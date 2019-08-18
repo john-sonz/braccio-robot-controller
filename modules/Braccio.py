@@ -1,15 +1,16 @@
 import serial
 import time
-import copy
 from Position import Position
+
+safe_pos = Position(90, 90, 90, 90, 90, 65)
 
 class Braccio:
     def __init__(self, serial_port, position):
         self.port = serial.Serial(serial_port, 115200, timeout=5)
-        self._position = position
-        time.sleep(3)
+        self._position = position.copy()
+        time.sleep(3)        
 
-    def write(self, string):        
+    def write(self, string):
         self.port.write(string.encode())
         self.port.readline()
 
@@ -20,12 +21,15 @@ class Braccio:
         self.write('1\n')
         self.move_to_position(self._position, 30)
 
+    def reset(self, speed, delay = 0, cb = None):
+        self.move_to_position(safe_pos, speed, delay, cb)
+
     def get_position(self):
-        return copy.deepcopy(self._position)
+        return self._position.copy()
 
     def move_to_position(self, position, speed, delay = 0, cb = None):
         self.write('P' + position.to_string() + ',' + str(speed) + '\n')
-        self._position = position
+        self._position = position.copy()
         if cb is not None: cb(position)
         time.sleep(delay)
 

@@ -1,3 +1,5 @@
+import copy
+
 class Position:
     def __init__(self, base, shoulder, elbow, wrist, wrist_rotation, gripper):
         self.angels = [0, 0, 0, 0, 0, 0]
@@ -10,12 +12,16 @@ class Position:
 
     def set(self, joint_number, value):
         self.angels[joint_number] = min(max(value, 0), 180)
+        return self
 
     def get(self, joint_number):
         return self.angels[joint_number]
 
     def add(self, joint_number, value):
-        self.set(joint_number, self.angels[joint_number] + value)
+        return self.set(joint_number, self.angels[joint_number] + value)
+
+    def copy(self):
+        return copy.deepcopy(self)
 
     def to_string(self):
         result = ""
