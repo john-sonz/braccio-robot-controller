@@ -19,7 +19,7 @@ class Braccio:
 
     def power_on(self):        
         self.write('1\n')
-        self.move_to_position(self._position, 30)
+        self.move_to_position(self._position, 20)
 
     def reset(self, speed, delay = 0, cb = None):
         self.move_to_position(safe_pos, speed, delay, cb)
