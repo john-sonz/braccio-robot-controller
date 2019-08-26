@@ -8,11 +8,15 @@ from Position import Position
 stop = False
 start_pos = Position(90, 90, 90, 90, 90, 65)
 point_pos_default = Position(90, 65, 70, 10, 90, 40)
+grab_pos_close_start = Position(90, 80, 20, 0, 90, 0)
+grab_pos_close_end = Position(90, 50, 40, 50, 90, 0)
+grab_pos_far_start = Position(90, 65, 70, 10, 90, 0)
+grab_pos_far_end = Position(90, 65, 70, 10, 90, 0)
 
 speeds = {
     "vs": 20,  # very slow
     "s": 40,   # slow
-    "m": 60,  # medium
+    "m": 60,   # medium
     "f": 80,   # fast 
     "vf": 100, # very fast
 }
@@ -21,6 +25,14 @@ def get_rotation_angle(x, y):
     if x == 0: return 90
     angle = math.degrees(math.atan(y/x))
     return int(180 - angle if angle > 0 else -angle)
+
+def distance_from_origin(x,y):
+    return (x**2 + y**2)**(1/2)
+
+def calc_grab_pos(p1, p2, percent):        
+    differences = [int((a - b) * percent // 100) for (a, b) in zip(p1.angles, p2.angles)]
+    new_angles = [ a - b for (a, b) in zip(p1.angles, differences)]
+    return Position(*new_angles)
 
 def read_input():    
     global stop
@@ -42,6 +54,28 @@ def read_input():
             point_pos =  point_pos_default.copy().set(0, target_angle)
             robot.move_to_position(point_pos, speeds["m"])
         
+        elif inp.startswith("grab "):
+            [_ , x, y] = inp.split(" ")
+            robot.reset(speeds["s"])
+            x, y = [int(x), int(y)]
+            distance = distance_from_origin(x,y) // 10
+            target_angle = get_rotation_angle(x, y)
+
+            if distance >= 5 and distance < 25:
+                p = (distance - 5) * 5
+                pos = calc_grab_pos(grab_pos_close_start.copy(), grab_pos_close_end.copy(), p)
+                pos.add(1, 20).set(0, target_angle)
+                robot.move_to_position(pos, speeds["s"], delay=1.5)
+                pos.add(1, -20)
+                robot.move_to_position(pos, speeds["s"])
+                robot.close_gripper(delay=1)
+                robot.reset(speeds["vs"])
+
+            elif distance >= 25 and distance <= 45:
+                p = (distance - 25) * 5
+                pos = calc_grab_pos(grab_pos_far_start.copy(), grab_pos_far_end.copy(), p)
+                #TODO
+
         elif inp.startswith("reset"):
             robot.reset(speeds["s"])
 

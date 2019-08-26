@@ -2,7 +2,7 @@ import serial
 import time
 from Position import Position
 
-safe_pos = Position(90, 90, 90, 90, 90, 65)
+safe_pos = Position(90, 90, 90, 90, 90, 72)
 
 class Braccio:
     def __init__(self, serial_port, position):
@@ -41,5 +41,5 @@ class Braccio:
         self.move_joint(5, 0, speed, delay, cb)
     
     def close_gripper(self, percent = 1, speed = 150, delay = 0 , cb = None):
-        angle = int(percent * 70)
+        angle = int(percent * 72)
         self.move_joint(5, angle, speed, delay, cb)
