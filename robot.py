@@ -6,12 +6,16 @@ from Braccio import Braccio
 from Position import Position
 
 stop = False
+
 start_pos = Position(90, 90, 90, 90, 90, 65)
 point_pos_default = Position(90, 65, 70, 10, 90, 40)
 grab_pos_close_start = Position(90, 80, 20, 0, 90, 0)
 grab_pos_close_end = Position(90, 50, 40, 50, 90, 0)
-grab_pos_far_start = Position(90, 65, 70, 10, 90, 0)
-grab_pos_far_end = Position(90, 65, 70, 10, 90, 0)
+grab_pos_far_start = Position(90, 40, 0, 150, 90, 0)
+grab_pos_far_end = Position(90, 15, 50, 130, 90, 0)
+
+close_range = (5, 25)
+far_range = (25, 35)
 
 speeds = {
     "vs": 20,  # very slow
@@ -60,21 +64,22 @@ def read_input():
             x, y = [int(x), int(y)]
             distance = distance_from_origin(x,y) // 10
             target_angle = get_rotation_angle(x, y)
-
-            if distance >= 5 and distance < 25:
-                p = (distance - 5) * 5
+            pos = None
+            if distance >= close_range[0] and distance < close_range[1]:
+                p = (distance - close_range[0]) * 100/(close_range[1] - close_range[0])
                 pos = calc_grab_pos(grab_pos_close_start.copy(), grab_pos_close_end.copy(), p)
-                pos.add(1, 20).set(0, target_angle)
-                robot.move_to_position(pos, speeds["s"], delay=1.5)
-                pos.add(1, -20)
-                robot.move_to_position(pos, speeds["s"])
-                robot.close_gripper(delay=1)
-                robot.reset(speeds["vs"])
+                
 
-            elif distance >= 25 and distance <= 45:
-                p = (distance - 25) * 5
-                pos = calc_grab_pos(grab_pos_far_start.copy(), grab_pos_far_end.copy(), p)
-                #TODO
+            elif distance >= far_range[0] and distance <= far_range[1]:
+                p = (distance - far_range[0]) * 100 / (far_range[1] - far_range[0])
+                pos = calc_grab_pos(grab_pos_far_start.copy(), grab_pos_far_end.copy(), p)                
+
+            pos.add(1, 20).set(0, target_angle)
+            robot.move_to_position(pos, speeds["s"], delay=1.5)
+            pos.add(1, -20)
+            robot.move_to_position(pos, speeds["s"])
+            robot.close_gripper(delay=1)
+            robot.reset(speeds["vs"])
 
         elif inp.startswith("reset"):
             robot.reset(speeds["s"])
