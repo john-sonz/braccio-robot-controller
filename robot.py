@@ -16,19 +16,12 @@ default_payload = config["default_payload"]
 x_correction, y_correction = config["coords_correction"].values()
 close_range, far_range = config["close_range"], config["far_range"]
 
-print(instruction_url, error_url, default_payload)
-print(x_correction, y_correction)
-print(close_range, far_range)
-
-
 start_pos = Position(90, 90, 90, 90, 90, 65)
 point_pos_default = Position(90, 65, 70, 10, 90, 40)
 grab_pos_close_start = Position(90, 80, 20, 0, 90, 0)
 grab_pos_close_end = Position(90, 50, 40, 50, 90, 0)
 grab_pos_far_start = Position(90, 40, 0, 150, 90, 0)
 grab_pos_far_end = Position(90, 15, 50, 130, 90, 0)
-
-
 
 speeds = {
     "vs": 20,  # very slow
@@ -53,15 +46,32 @@ def calc_grab_pos(p1, p2, percent):
     new_angles = [ a - b for (a, b) in zip(p1.angles, differences)]
     return Position(*new_angles)
 
-def fetch_instruction():    
+def pos_from_coords(x, y):
+    x, y = [int(x) + x_correction, int(y) + y_correction]
+    distance = distance_from_origin(x,y) // 10
+    target_angle = get_rotation_angle(x, y)
+    pos = None
+    if distance >= close_range[0] and distance < close_range[1]:
+        p = (distance - close_range[0]) * 100/(close_range[1] - close_range[0])
+        pos = calc_grab_pos(grab_pos_close_start.copy(), grab_pos_close_end.copy(), p)
+
+    elif distance >= far_range[0] and distance <= far_range[1]:
+        p = (distance - far_range[0]) * 100 / (far_range[1] - far_range[0])
+        pos = calc_grab_pos(grab_pos_far_start.copy(), grab_pos_far_end.copy(), p)
+
+    if pos is not None: pos.set(0, target_angle)
+    return pos
+
+def fetch_instruction():
     global stop
     global robot
     r = None
     try:
-        r = requests.post(instruction_url, json=defualt_payload, timeout=None)
+        r = requests.post(instruction_url, json=default_payload, timeout=None)
     except Exception as e:
+        robot.reset(speeds["vs"])
         print(e)
-        time.sleep(5)
+        time.sleep(3)
         return
     
     print(r.status_code, r.text)
@@ -75,48 +85,56 @@ def fetch_instruction():
     if action is None:
         return
 
-    x, y, cam_dist = instruction["coords"]
+    x, y, cam_dist = instruction["coords"] if "coords" in instruction else [0, 0, 0]
 
     if action == "exit" or action == "quit":
         stop = True
         robot.reset(speeds["s"], delay = 2)
         robot.power_off()
     
-    elif action.startswith("point") or action.startswith("move over"):
-        robot.reset(speeds["s"])            
-        
-        target_angle = get_rotation_angle(int(x + x_correction), int(y + y_correction))            
-        point_pos =  point_pos_default.copy().set(0, target_angle)
-        robot.move_to_position(point_pos, speeds["m"])
-    
-    elif action.startswith("grab"):            
-        robot.reset(speeds["s"])
-
-        x, y = [int(x) + x_correction, int(y) + y_correction]
-        distance = distance_from_origin(x,y) // 10
-        target_angle = get_rotation_angle(x, y)
-        pos = None
-        if distance >= close_range[0] and distance < close_range[1]:
-            p = (distance - close_range[0]) * 100/(close_range[1] - close_range[0])
-            pos = calc_grab_pos(grab_pos_close_start.copy(), grab_pos_close_end.copy(), p)
-            
-
-        elif distance >= far_range[0] and distance <= far_range[1]:
-            p = (distance - far_range[0]) * 100 / (far_range[1] - far_range[0])
-            pos = calc_grab_pos(grab_pos_far_start.copy(), grab_pos_far_end.copy(), p)                
-        else:
+    elif action == "point" or action == "move over": 
+        point_pos = pos_from_coords(x, y)
+        if point_pos is None:
             resp = requests.post(error_url, json={"msg": "Error during performing the instruction", "instruction": instruction })
             time.sleep(3)
             return
 
-        pos.add(1, 20).set(0, target_angle)
-        robot.move_to_position(pos, speeds["s"], delay=1.5)
-        pos.add(1, -20)
-        robot.move_to_position(pos, speeds["s"])
-        robot.close_gripper(delay=2)
-        robot.reset(speeds["vs"])
+        gripper_pos = robot.get_position().get(5)
+        point_pos.add(1, 30).set(5, gripper_pos)
+        robot.move_to_position(point_pos, speeds["s"])
+    
+    elif action == "grab":
+        grab_pos = pos_from_coords(x, y)
+        if grab_pos is None:
+            resp = requests.post(error_url, json={"msg": "Error during performing the instruction", "instruction": instruction })
+            time.sleep(3)
+            return
 
-    elif action.startswith("reset"):
+        grab_pos.add(1, 20)
+        robot.move_to_position(grab_pos, speeds["s"], delay=1.5)
+        grab_pos.add(1, -20)
+        robot.move_to_position(grab_pos, speeds["s"])
+        robot.close_gripper(delay=2)
+        grab_pos.add(1, 20).set(5, 72)
+        robot.move_to_position(grab_pos, speeds["s"])
+    
+    elif action == "drop over":
+        drop_pos = pos_from_coords(x, y)
+        if drop_pos is None:
+            resp = requests.post(error_url, json={"msg": "Error during performing the instruction", "instruction": instruction })
+            time.sleep(3)
+            return
+        
+        drop_pos.add(1, 30).set(5, 72)
+        robot.move_to_position(drop_pos, speeds["vs"])
+        robot.open_gripper(delay= 1)
+        robot.reset("s")
+
+    elif action == "drop":
+        robot.open_gripper(delay=1)
+        robot.reset("s")
+
+    elif action == "reset":
         robot.reset(speeds["s"])
 
 robot = Braccio(sys.argv[1] if len(sys.argv) > 1 else config["default_COM"], start_pos)
