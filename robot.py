@@ -1,8 +1,8 @@
-import sys
+import json
 import math
 import requests
+import sys
 import time
-import json
 sys.path.insert(0, "./modules")
 
 from Braccio import Braccio
@@ -17,7 +17,6 @@ x_correction, y_correction = config["coords_correction"].values()
 close_range, far_range = config["close_range"], config["far_range"]
 
 start_pos = Position(90, 90, 90, 90, 90, 65)
-point_pos_default = Position(90, 65, 70, 10, 90, 40)
 grab_pos_close_start = Position(90, 80, 20, 0, 90, 0)
 grab_pos_close_end = Position(90, 50, 40, 50, 90, 0)
 grab_pos_far_start = Position(90, 40, 0, 150, 90, 0)
@@ -27,7 +26,7 @@ speeds = {
     "vs": 20,  # very slow
     "s": 40,   # slow
     "m": 60,   # medium
-    "f": 80,   # fast 
+    "f": 80,   # fast
     "vf": 100, # very fast
 }
 
@@ -41,7 +40,7 @@ def get_rotation_angle(x, y):
 def distance_from_origin(x,y):
     return (x**2 + y**2)**(1/2)
 
-def calc_grab_pos(p1, p2, percent):        
+def calc_grab_pos(p1, p2, percent):
     differences = [int((a - b) * percent // 100) for (a, b) in zip(p1.angles, p2.angles)]
     new_angles = [ a - b for (a, b) in zip(p1.angles, differences)]
     return Position(*new_angles)
@@ -67,46 +66,46 @@ def fetch_instruction():
     global robot
     r = None
     try:
-        r = requests.post(instruction_url, json=default_payload, timeout=None)
+        r = requests.post(instruction_url, json=default_payload, timeout=30)
     except Exception as e:
         robot.reset(speeds["vs"])
         print(e)
         time.sleep(3)
         return
-    
+
     print(r.status_code, r.text)
 
     if r.status_code != 200:
         return
     instruction = r.json()
-        
+
     action = instruction["type"]
-    
+
     if action is None:
         return
 
-    x, y, cam_dist = instruction["coords"] if "coords" in instruction else [0, 0, 0]
+    x, y, _ = instruction["coords"] if "coords" in instruction else [0, 0, 0]
 
     if action == "exit" or action == "quit":
         stop = True
         robot.reset(speeds["s"], delay = 2)
         robot.power_off()
-    
-    elif action == "point" or action == "move over": 
+
+    elif action == "point" or action == "move over":
         point_pos = pos_from_coords(x, y)
         if point_pos is None:
-            resp = requests.post(error_url, json={"msg": "Error during performing the instruction", "instruction": instruction })
+            requests.post(error_url, json={"msg": "Error during performing the instruction", "instruction": instruction })
             time.sleep(3)
             return
 
         gripper_pos = robot.get_position().get(5)
         point_pos.add(1, 30).set(5, gripper_pos)
         robot.move_to_position(point_pos, speeds["s"])
-    
+
     elif action == "grab":
         grab_pos = pos_from_coords(x, y)
         if grab_pos is None:
-            resp = requests.post(error_url, json={"msg": "Error during performing the instruction", "instruction": instruction })
+            requests.post(error_url, json={"msg": "Error during performing the instruction", "instruction": instruction })
             time.sleep(3)
             return
 
@@ -117,22 +116,22 @@ def fetch_instruction():
         robot.close_gripper(delay=2)
         grab_pos.add(1, 20).set(5, 72)
         robot.move_to_position(grab_pos, speeds["s"])
-    
+
     elif action == "drop over":
         drop_pos = pos_from_coords(x, y)
         if drop_pos is None:
-            resp = requests.post(error_url, json={"msg": "Error during performing the instruction", "instruction": instruction })
+            requests.post(error_url, json={"msg": "Error during performing the instruction", "instruction": instruction })
             time.sleep(3)
             return
-        
+
         drop_pos.add(1, 30).set(5, 72)
         robot.move_to_position(drop_pos, speeds["vs"])
         robot.open_gripper(delay= 1)
-        robot.reset("s")
+        robot.reset(speeds["s"])
 
     elif action == "drop":
         robot.open_gripper(delay=1)
-        robot.reset("s")
+        robot.reset(speeds["s"])
 
     elif action == "reset":
         robot.reset(speeds["s"])
@@ -141,5 +140,6 @@ robot = Braccio(sys.argv[1] if len(sys.argv) > 1 else config["default_COM"], sta
 
 if __name__ == "__main__":
     robot.power_on()
+    robot.reset(speeds["vs"])
     while not stop:
         fetch_instruction()
