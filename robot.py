@@ -17,10 +17,10 @@ x_correction, y_correction = config["coords_correction"].values()
 close_range, far_range = config["close_range"], config["far_range"]
 
 start_pos = Position(90, 90, 90, 90, 90, 65)
-grab_pos_close_start = Position(90, 80, 20, 0, 90, 0)
-grab_pos_close_end = Position(90, 50, 40, 50, 90, 0)
-grab_pos_far_start = Position(90, 40, 0, 150, 90, 0)
-grab_pos_far_end = Position(90, 15, 50, 130, 90, 0)
+grab_pos_close_start = Position(90, 100, 0, 15, 90, 0)
+grab_pos_close_end = Position(90, 40, 60, 40, 90, 0)
+grab_pos_far_start = Position(90, 30, 0, 160, 90, 0)
+grab_pos_far_end = Position(90, 15, 47, 130, 90, 0)
 
 speeds = {
     "vs": 20,  # very slow
@@ -61,6 +61,10 @@ def pos_from_coords(x, y):
     if pos is not None: pos.set(0, target_angle)
     return pos
 
+def send_error_and_sleep(instr, sleep_time=3):
+    requests.post(error_url, json={"msg": "Error during performing the instruction", "instruction": instr })
+    time.sleep(sleep_time)
+
 def fetch_instruction():
     global stop
     global robot
@@ -94,8 +98,7 @@ def fetch_instruction():
     elif action == "point" or action == "move over":
         point_pos = pos_from_coords(x, y)
         if point_pos is None:
-            requests.post(error_url, json={"msg": "Error during performing the instruction", "instruction": instruction })
-            time.sleep(3)
+            send_error_and_sleep(instruction)
             return
 
         gripper_pos = robot.get_position().get(5)
@@ -105,8 +108,7 @@ def fetch_instruction():
     elif action == "grab":
         grab_pos = pos_from_coords(x, y)
         if grab_pos is None:
-            requests.post(error_url, json={"msg": "Error during performing the instruction", "instruction": instruction })
-            time.sleep(3)
+            send_error_and_sleep(instruction)
             return
 
         grab_pos.add(1, 20)
@@ -120,7 +122,7 @@ def fetch_instruction():
     elif action == "drop over":
         drop_pos = pos_from_coords(x, y)
         if drop_pos is None:
-            requests.post(error_url, json={"msg": "Error during performing the instruction", "instruction": instruction })
+            send_error_and_sleep(instruction)
             time.sleep(3)
             return
 
