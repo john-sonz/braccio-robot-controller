@@ -1,12 +1,13 @@
 {
     "default_COM": "/dev/ttyUSB0",
-    "instruction_url": "http://ec45c0f3.ngrok.io/action",
+    "instruction_url": "http://localhost:3000",
     "default_payload": ["robot"],
-    "error_url": "http://ec45c0f3.ngrok.io/error",
+    "error_url": "http://localhost:3000/error",
     "coords_correction": {
         "x": 0,
-        "y": -130
+        "y": -65,
+        "angle": 5
     },
-    "close_range": [5, 25],
-    "far_range": [25, 33]
+    "close_range": [11.5, 31.5],
+    "far_range": [31.5, 40]
 }

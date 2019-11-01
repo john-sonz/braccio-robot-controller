@@ -13,11 +13,11 @@ with open('config.json', 'r') as f:
 
 instruction_url, error_url = config["instruction_url"], config["error_url"]
 default_payload = config["default_payload"]
-x_correction, y_correction = config["coords_correction"].values()
+x_correction, y_correction, angle_correction= config["coords_correction"].values()
 close_range, far_range = config["close_range"], config["far_range"]
 
 start_pos = Position(90, 90, 90, 90, 90, 65)
-grab_pos_close_start = Position(90, 100, 0, 15, 90, 0)
+grab_pos_close_start = Position(90, 95, 0, 15, 90, 0)
 grab_pos_close_end = Position(90, 40, 60, 40, 90, 0)
 grab_pos_far_start = Position(90, 30, 0, 160, 90, 0)
 grab_pos_far_end = Position(90, 15, 47, 130, 90, 0)
@@ -53,12 +53,17 @@ def pos_from_coords(x, y):
     if distance >= close_range[0] and distance < close_range[1]:
         p = (distance - close_range[0]) * 100/(close_range[1] - close_range[0])
         pos = calc_grab_pos(grab_pos_close_start.copy(), grab_pos_close_end.copy(), p)
+        if pos.get(1) < 85 and pos.get(1) >= 45: pos.add(1, -5)
+        if pos.get(1) < 45: pos.set(1, 40)
 
     elif distance >= far_range[0] and distance <= far_range[1]:
         p = (distance - far_range[0]) * 100 / (far_range[1] - far_range[0])
         pos = calc_grab_pos(grab_pos_far_start.copy(), grab_pos_far_end.copy(), p)
 
-    if pos is not None: pos.set(0, target_angle)
+    if pos is not None:
+        pos.set(0, target_angle)
+        if target_angle > 95: pos.add(0, angle_correction)
+
     return pos
 
 def send_error_and_sleep(instr, sleep_time=3):
@@ -70,7 +75,7 @@ def fetch_instruction():
     global robot
     r = None
     try:
-        r = requests.post(instruction_url, json=default_payload, timeout=30)
+        r = requests.post(instruction_url, json=default_payload, timeout=None)
     except Exception as e:
         robot.reset(speeds["vs"])
         print(e)
