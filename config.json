@@ -1,12 +1,12 @@
 {
-    "default_COM": "COM4",
+    "default_COM": "/dev/ttyUSB0",
     "instruction_url": "http://ec45c0f3.ngrok.io/action",
     "default_payload": ["robot"],
     "error_url": "http://ec45c0f3.ngrok.io/error",
     "coords_correction": {
         "x": 0,
-        "y": 0
+        "y": -130
     },
     "close_range": [5, 25],
-    "far_range": [25, 35]
+    "far_range": [25, 33]
 }
