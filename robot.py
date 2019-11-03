@@ -47,13 +47,14 @@ def calc_grab_pos(p1, p2, percent):
 
 def pos_from_coords(x, y):
     x, y = [int(x) + x_correction, int(y) + y_correction]
+    if y <= 0: y = 1
     distance = distance_from_origin(x,y) // 10
     target_angle = get_rotation_angle(x, y)
     pos = None
     if distance >= close_range[0] and distance < close_range[1]:
         p = (distance - close_range[0]) * 100/(close_range[1] - close_range[0])
         pos = calc_grab_pos(grab_pos_close_start.copy(), grab_pos_close_end.copy(), p)
-        if pos.get(1) < 85 and pos.get(1) >= 45: pos.add(1, -5)
+        if pos.get(1) < 85 and pos.get(1) >= 50: pos.add(1, -5)
         if pos.get(1) < 45: pos.set(1, 40)
 
     elif distance >= far_range[0] and distance <= far_range[1]:
