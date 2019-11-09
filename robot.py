@@ -55,7 +55,7 @@ def pos_from_coords(x, y):
         p = (distance - close_range[0]) * 100/(close_range[1] - close_range[0])
         pos = calc_grab_pos(grab_pos_close_start.copy(), grab_pos_close_end.copy(), p)
         if pos.get(1) < 85 and pos.get(1) >= 50: pos.add(1, -5)
-        if pos.get(1) < 45: pos.set(1, 40)
+
 
     elif distance >= far_range[0] and distance <= far_range[1]:
         p = (distance - far_range[0]) * 100 / (far_range[1] - far_range[0])
@@ -64,6 +64,7 @@ def pos_from_coords(x, y):
     if pos is not None:
         pos.set(0, target_angle)
         if target_angle > 95: pos.add(0, angle_correction)
+        if distance >= far_range[0]: pos.add(0, angle_correction//2)
 
     return pos
 
